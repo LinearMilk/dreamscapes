@@ -95,17 +95,3 @@ button:focus-visible {
   }
 }
 
-/* Styling for the WebGL warning message */
-#webglmessage {
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  text-align: center;
-  color: #ff0000;
-  background-color: #ffe6e6;
-  padding: 10px;
-  margin: 20px auto;
-  width: 80%;
-  border: 1px solid #ff0000;
-  border-radius: 5px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-}
