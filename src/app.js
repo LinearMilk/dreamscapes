@@ -1,14 +1,14 @@
 import * as THREE from "three";
-// import { WEBGL } from "./utils/webgl.js"; // Import the custom WebGL utility
+import { WEBGL } from "./utils/webgl.js"; // Import the custom WebGL utility
 import { setupCamera } from "./scripts/camera.js";
 import { setupLighting } from "./scripts/lighting.js";
 import { createHexGrid } from "./components/hexGrid.js";
 
-// if (!WEBGL.isWebGLAvailable()) {
-//   // If WebGL is not available, show the warning message
-//   const warning = WEBGL.getWebGLErrorMessage();
-//   document.body.appendChild(warning);
-// } else {
+if (!WEBGL.isWebGLAvailable()) {
+  // If WebGL is not available, show the warning message
+  const warning = WEBGL.getWebGLErrorMessage();
+  document.body.appendChild(warning);
+}
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
