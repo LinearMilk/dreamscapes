@@ -1,99 +1,105 @@
 import * as THREE from "three";
-import { WEBGL } from "./utils/webgl.js"; // Import the custom WebGL utility
+import { WEBGL } from "./utils/webgl.js";
 import { setupCamera } from "./scripts/camera.js";
 import { setupLighting } from "./scripts/lighting.js";
-import { createHexGrid } from "./components/hexGrid.js";
+import {
+  radius,
+  createHexGrid,
+  createHexTile,
+  getBiomeFromNoise,
+  axialToCartesian,
+  cartesianToAxial,
+} from "./components/hexGrid.js";
 
 if (!WEBGL.isWebGLAvailable()) {
-  // If WebGL is not available, show the warning message
   const warning = WEBGL.getWebGLErrorMessage();
   document.body.appendChild(warning);
-}
-const scene = new THREE.Scene();
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x87ceeb); // Set sky-like blue background
-document.body.appendChild(renderer.domElement);
+} else {
+  const scene = new THREE.Scene();
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x87ceeb);
+  document.body.appendChild(renderer.domElement);
 
-// Set up the camera
-const { camera, controls } = setupCamera(renderer, scene);
+  const { camera, controls } = setupCamera(renderer, scene);
+  setupLighting(scene);
 
-// Set up lighting
-setupLighting(scene);
+  const hexGroup = createHexGrid(5, 0.3); // Initial grid
+  scene.add(hexGroup);
 
-// Create hex grid with thickness
-const hexGroup = createHexGrid(5, 0.3); // Adds thickness to hexes
-scene.add(hexGroup);
+  const existingHexes = new Set(); // Track axial coordinates of hexes
 
-// Raycaster and mouse for interactivity
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let INTERSECTED = null; // Tile currently hovered over
-let SELECTED = null; // Tile currently selected
+  // Populate `existingHexes` with initial grid
+  hexGroup.children.forEach((hex) => {
+    const { q, r } = cartesianToAxial(hex.position.x, hex.position.z, radius);
+    existingHexes.add(`${q},${r}`);
+  });
 
-// Add event listeners for mouse movement and clicks
-window.addEventListener("mousemove", onMouseMove);
-window.addEventListener("click", onClick);
-
-function onMouseMove(event) {
-  // Convert mouse position to normalized device coordinates
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-}
-
-function onClick() {
-  if (INTERSECTED) {
-    if (SELECTED === INTERSECTED) {
-      // Deselect the tile if it's already selected
-      SELECTED.material.emissive.set(0x000000); // Reset color
-      SELECTED = null;
-      console.log("Tile deselected");
-    } else {
-      // Deselect the currently selected tile (if any)
-      if (SELECTED) {
-        SELECTED.material.emissive.set(0x000000); // Reset color
-      }
-      // Select the new tile
-      SELECTED = INTERSECTED;
-      SELECTED.material.emissive.set(0xff8800); // Highlight selected tile
-      console.log(`Tile selected at:`, SELECTED.position);
+  function addHexToGroup(q, r, hex) {
+    const key = `${q},${r}`;
+    if (!existingHexes.has(key)) {
+      existingHexes.add(key); // Track axial position
+      hexGroup.add(hex); // Add hex to scene
     }
   }
-}
 
-// Animation loop
-function animate() {
-  requestAnimationFrame(animate);
-
-  // Update raycaster
-  raycaster.setFromCamera(mouse, camera);
-
-  // Check for intersections with hex tiles
-  const intersects = raycaster.intersectObjects(hexGroup.children);
-
-  if (intersects.length > 0) {
-    const hoveredTile = intersects[0].object;
-
-    // Handle hover state
-    if (hoveredTile !== INTERSECTED) {
-      if (INTERSECTED && INTERSECTED !== SELECTED) {
-        INTERSECTED.material.emissive.set(0x000000); // Reset hover highlight
-      }
-      INTERSECTED = hoveredTile;
-      if (INTERSECTED !== SELECTED) {
-        INTERSECTED.material.emissive.set(0x333333); // Highlight hovered tile
-      }
-    }
-  } else {
-    // Reset hover highlight if nothing is hovered
-    if (INTERSECTED && INTERSECTED !== SELECTED) {
-      INTERSECTED.material.emissive.set(0x000000);
-    }
-    INTERSECTED = null;
+  function doesHexExist(q, r) {
+    return existingHexes.has(`${q},${r}`);
   }
 
-  controls.update(); // Smooth camera controls
-  renderer.render(scene, camera);
+  function getNeighborPositions(q, r) {
+    const neighbors = [
+      { q: q + 1, r: r }, // Right
+      { q: q - 1, r: r }, // Left
+      { q: q, r: r + 1 }, // Top-right
+      { q: q - 1, r: r + 1 }, // Top-left
+      { q: q, r: r - 1 }, // Bottom-right
+      { q: q + 1, r: r - 1 }, // Bottom-left
+    ];
+    return neighbors;
+  }
+
+  function onClick() {
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(hexGroup.children);
+
+    if (intersects.length > 0) {
+      const clickedTile = intersects[0].object;
+      console.log("Tile clicked at:", clickedTile.position);
+
+      const { q, r } = cartesianToAxial(
+        clickedTile.position.x,
+        clickedTile.position.z,
+        radius
+      );
+      const neighbors = getNeighborPositions(q, r);
+
+      neighbors.forEach(({ q, r }) => {
+        if (!doesHexExist(q, r)) {
+          const { x, z } = axialToCartesian(q, r, radius);
+          const biome = getBiomeFromNoise(x, z);
+          const newHex = createHexTile(x, z, 0.3, biome);
+          addHexToGroup(q, r, newHex);
+        }
+      });
+    }
+  }
+
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("click", onClick);
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
 }
-animate();
-// }
