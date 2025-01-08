@@ -57,18 +57,17 @@ export function createHexTile(x, z, height, biome) {
 
 export function createHexGrid(gridRadius, height = 0.3) {
   const hexGroup = new THREE.Group();
-  const tileHeight = Math.sqrt(3) * (radius - gap);
 
+  // Iterate over axial coordinates within the given radius
   for (let q = -gridRadius; q <= gridRadius; q++) {
     for (let r = -gridRadius; r <= gridRadius; r++) {
-      const x = ((radius * 3) / 2) * q;
-      const z = tileHeight * (r + q / 2);
-      const distance = Math.abs(q) + Math.abs(r) + Math.abs(-q - r);
-
-      if (distance / 2 <= gridRadius) {
-        const biome = getBiomeFromNoise(x, z); // Assign biome based on noise
-        const hex = createHexTile(x, z, height, biome);
-        hexGroup.add(hex);
+      const s = -q - r; // Axial coordinate rule: q + r + s = 0
+      if (Math.abs(s) <= gridRadius) {
+        // Convert axial to Cartesian for precise positioning
+        const { x, z } = axialToCartesian(q, r, radius);
+        const biome = getBiomeFromNoise(q, r); // Generate biome for this tile
+        const hex = createHexTile(x, z, height, biome); // Create the tile
+        hexGroup.add(hex); // Add to the group
       }
     }
   }

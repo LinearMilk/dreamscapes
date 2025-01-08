@@ -38,8 +38,10 @@ hexGroup.children.forEach((hex) => {
 function addHexToGroup(q, r, hex) {
   const key = `${q},${r}`;
   if (!existingHexes.has(key)) {
-    existingHexes.add(key); // Track axial position
-    hexGroup.add(hex); // Add hex to scene
+    const { x, z } = axialToCartesian(q, r, radius); // Snap to exact Cartesian position
+    hex.position.set(x, -0.15, z); // Adjust Y position as necessary
+    existingHexes.add(key); // Track the axial coordinate
+    hexGroup.add(hex);
   }
 }
 
@@ -65,21 +67,21 @@ function onClick() {
 
   if (intersects.length > 0) {
     const clickedTile = intersects[0].object;
-    console.log("Tile clicked at:", clickedTile.position);
 
+    // Get the axial coordinates of the clicked tile
     const { q, r } = cartesianToAxial(
       clickedTile.position.x,
       clickedTile.position.z,
       radius
     );
-    const neighbors = getNeighborPositions(q, r);
 
-    neighbors.forEach(({ q, r }) => {
-      if (!doesHexExist(q, r)) {
-        const { x, z } = axialToCartesian(q, r, radius);
-        const biome = getBiomeFromNoise(x, z);
-        const newHex = createHexTile(x, z, 0.3, biome);
-        addHexToGroup(q, r, newHex);
+    // Get neighbors and place new tiles
+    const neighbors = getNeighborPositions(q, r);
+    neighbors.forEach(({ q: neighborQ, r: neighborR }) => {
+      if (!doesHexExist(neighborQ, neighborR)) {
+        const biome = getBiomeFromNoise(neighborQ, neighborR); // Adjust biome logic as needed
+        const newHex = createHexTile(0, 0, 0.3, biome); // Create the hex (position set later)
+        addHexToGroup(neighborQ, neighborR, newHex); // Add and snap to correct position
       }
     });
   }
