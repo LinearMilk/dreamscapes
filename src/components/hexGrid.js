@@ -87,7 +87,7 @@ export function createHexTile(x, z, height, biome, q, r) {
   hex.position.set(x, -height / 2, z);
   hex.castShadow = true;
   hex.receiveShadow = true;
-  hex.userData.axial = { q, r };
+  hex.userData = { axial: { q, r }, biome };
   return hex;
 }
 
@@ -199,5 +199,5 @@ export function checkProximityAndExpand(player, hexGroup, radius) {
   const { q, r } = player.userData.axial;
 
   // Call expandGrid with the player's current axial coordinates
-  expandGrid(hexGroup, radius, { q, r }, 1); // Expand within 2 tiles of the player
+  expandGrid(hexGroup, radius, { q, r }, 2); // Expand within 2 tiles of the player
 }

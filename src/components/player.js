@@ -71,12 +71,23 @@ export function movePlayerRelativeToCamera(
     radius
   );
 
+  // Check if the target tile exists
   if (isValidTile(newQ, newR, hexGroup, radius)) {
-    const { x, z } = axialToCartesian(newQ, newR, radius);
-    player.position.set(x, 0.5, z);
-    player.userData.axial = { q: newQ, r: newR };
+    const targetTile = hexGroup.children.find(
+      (tile) =>
+        tile.userData?.axial?.q === newQ && tile.userData?.axial?.r === newR
+    );
 
-    // Check if expansion is needed
+    if (targetTile?.userData?.biome === "water") {
+      console.log("Movement blocked: Cannot enter water tiles!");
+    } else {
+      // Move the player to the new position
+      const { x, z } = axialToCartesian(newQ, newR, radius);
+      player.position.set(x, 0.5, z);
+      player.userData.axial = { q: newQ, r: newR };
+    }
+
+    // Check and expand the map
     checkProximityAndExpand(player, hexGroup, radius);
   } else {
     console.log("Invalid move: No valid tile at target position");
