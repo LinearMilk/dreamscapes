@@ -77,52 +77,6 @@ function getNeighborPositions(q, r) {
   return neighbors;
 }
 
-function onClick() {
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(hexGroup.children);
-
-  if (intersects.length > 0) {
-    const clickedTile = intersects[0].object;
-
-    // Get the axial coordinates of the clicked tile
-    const { q, r } = cartesianToAxial(
-      clickedTile.position.x,
-      clickedTile.position.z,
-      radius
-    );
-
-    // Get neighbors and generate new hexes
-    const neighbors = getNeighborPositions(q, r); // Get axial neighbors
-
-    neighbors.forEach(({ q: neighborQ, r: neighborR }) => {
-      if (!doesHexExist(neighborQ, neighborR)) {
-        // Convert axial coordinates to Cartesian
-        const { x, z } = axialToCartesian(neighborQ, neighborR, radius);
-
-        // Determine the biome for the new hex
-        const biome = getBiomeFromNoise(neighborQ, neighborR);
-
-        // Create the new hex with axial coordinates
-        const newHex = createHexTile(x, z, 0.3, biome, neighborQ, neighborR);
-
-        // Add the new hex to the scene and track it
-        hexGroup.add(newHex);
-        addHexToGroup(neighborQ, neighborR, newHex); // Track in axial space
-      }
-    });
-  }
-}
-window.addEventListener("mousemove", onMouseMove);
-window.addEventListener("click", onClick);
-
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-function onMouseMove(event) {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-}
-
 window.addEventListener("keydown", (event) => {
   const directionMap = {
     w: "forward",

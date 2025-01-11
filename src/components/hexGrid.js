@@ -87,7 +87,7 @@ export function createHexTile(x, z, height, biome, q, r) {
   hex.position.set(x, -height / 2, z);
   hex.castShadow = true;
   hex.receiveShadow = true;
-
+  hex.userData.axial = { q, r };
   return hex;
 }
 
@@ -139,4 +139,65 @@ export function isValidTile(q, r, hexGroup, radius) {
     const dz = Math.abs(tile.position.z - z);
     return dx < radius * 0.1 && dz < radius * 0.1; // Tolerance for precision
   });
+}
+
+export function getGridEdges(hexGroup) {
+  const edges = {
+    minQ: Infinity,
+    maxQ: -Infinity,
+    minR: Infinity,
+    maxR: -Infinity,
+  };
+
+  hexGroup.children.forEach((tile) => {
+    const { q, r } = tile.userData.axial;
+    if (q < edges.minQ) edges.minQ = q;
+    if (q > edges.maxQ) edges.maxQ = q;
+    if (r < edges.minR) edges.minR = r;
+    if (r > edges.maxR) edges.maxR = r;
+  });
+
+  return edges;
+}
+
+export function expandGrid(hexGroup, radius, playerAxial, range) {
+  const { q: playerQ, r: playerR } = playerAxial;
+
+  const newTiles = [];
+
+  // Iterate over all axial coordinates within the range
+  for (let dq = -range; dq <= range; dq++) {
+    for (
+      let dr = Math.max(-range, -dq - range);
+      dr <= Math.min(range, -dq + range);
+      dr++
+    ) {
+      const q = playerQ + dq;
+      const r = playerR + dr;
+      const s = -q - r; // Ensure the axial coordinate rule: q + r + s = 0
+
+      // Check if the tile already exists
+      const exists = hexGroup.children.some(
+        (tile) => tile.userData?.axial?.q === q && tile.userData?.axial?.r === r
+      );
+
+      if (!exists) {
+        const biome = getBiomeFromNoise(q, r); // Determine biome dynamically
+        const { x, z } = axialToCartesian(q, r, radius);
+        const newTile = createHexTile(x, z, 0.3, biome, q, r);
+        newTiles.push(newTile);
+      }
+    }
+  }
+
+  // Add new tiles to the hexGroup
+  newTiles.forEach((tile) => hexGroup.add(tile));
+  return newTiles;
+}
+
+export function checkProximityAndExpand(player, hexGroup, radius) {
+  const { q, r } = player.userData.axial;
+
+  // Call expandGrid with the player's current axial coordinates
+  expandGrid(hexGroup, radius, { q, r }, 1); // Expand within 2 tiles of the player
 }

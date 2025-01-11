@@ -1,5 +1,10 @@
 import * as THREE from "three";
-import { axialToCartesian, cartesianToAxial, isValidTile } from "./hexGrid";
+import {
+  axialToCartesian,
+  cartesianToAxial,
+  isValidTile,
+  checkProximityAndExpand,
+} from "./hexGrid";
 
 export function createPlayer() {
   // Body
@@ -49,13 +54,11 @@ export function movePlayerRelativeToCamera(
     return;
   }
 
-  // Adjust direction based on camera orientation
   const adjustedDirection = movementDirection.clone();
   adjustedDirection.applyQuaternion(camera.quaternion);
   adjustedDirection.y = 0; // Ignore vertical rotation
-  adjustedDirection.normalize(); // Ensure consistent length
+  adjustedDirection.normalize();
 
-  // Calculate the target position
   const targetPosition = new THREE.Vector3(
     player.position.x,
     0,
@@ -68,11 +71,13 @@ export function movePlayerRelativeToCamera(
     radius
   );
 
-  // Validate and update position
   if (isValidTile(newQ, newR, hexGroup, radius)) {
     const { x, z } = axialToCartesian(newQ, newR, radius);
     player.position.set(x, 0.5, z);
     player.userData.axial = { q: newQ, r: newR };
+
+    // Check if expansion is needed
+    checkProximityAndExpand(player, hexGroup, radius);
   } else {
     console.log("Invalid move: No valid tile at target position");
   }
