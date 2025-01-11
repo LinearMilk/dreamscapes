@@ -18,6 +18,12 @@ export function setupCamera(renderer, scene) {
 
   camera.position.set(0, 10, 10);
   camera.lookAt(0, 0, 0);
-
+  // Restrict camera height
+  controls.addEventListener("change", () => {
+    camera.position.y = Math.max(10, camera.position.y); // Minimum height is 10
+    camera.position.y = Math.min(100, camera.position.y); // Maximum height is 100
+  });
+  controls.maxPolarAngle = Math.PI / 2; // Prevent camera from tilting below the ground
+  // controls.minPolarAngle = Math.PI / 4; // Prevent camera from tilting too high
   return { camera, controls };
 }
