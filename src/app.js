@@ -2,7 +2,10 @@ import * as THREE from "three";
 import { WEBGL } from "./utils/webgl.js";
 import { setupCamera } from "./scripts/camera.js";
 import { setupLighting } from "./scripts/lighting.js";
-import { createPlayer, movePlayer } from "./components/player.js";
+import {
+  createPlayer,
+  movePlayerRelativeToCamera,
+} from "./components/player.js";
 import {
   radius,
   createHexGrid,
@@ -120,33 +123,21 @@ function onMouseMove(event) {
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 }
 
-// Event listener for player movement
 window.addEventListener("keydown", (event) => {
-  switch (event.key) {
-    case "w":
-    case "ArrowUp":
-      movePlayer(player, "up", hexGroup, radius);
-      break;
-    case "s":
-    case "ArrowDown":
-      movePlayer(player, "down", hexGroup, radius);
-      break;
-    case "d":
-    case "e":
-      movePlayer(player, "upRight", hexGroup, radius);
-      break;
-    case "a":
-    case "q":
-      movePlayer(player, "upLeft", hexGroup, radius);
-      break;
-    case "z":
-      movePlayer(player, "downLeft", hexGroup, radius);
-      break;
-    case "x":
-      movePlayer(player, "downRight", hexGroup, radius);
-      break;
-    default:
-      break;
+  const directionMap = {
+    w: "forward",
+    s: "backward",
+    a: "left",
+    d: "right",
+    ArrowUp: "forward",
+    ArrowDown: "backward",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+  };
+
+  const direction = directionMap[event.key];
+  if (direction) {
+    movePlayerRelativeToCamera(player, direction, camera, hexGroup, 1);
   }
 });
 

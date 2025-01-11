@@ -1,7 +1,5 @@
 import * as THREE from "three";
-import { axialToCartesian } from "./hexGrid";
-
-let playerPosition = { q: 0, r: 0 };
+import { axialToCartesian, cartesianToAxial, isValidTile } from "./hexGrid";
 
 export function createPlayer() {
   // Body
@@ -20,45 +18,62 @@ export function createPlayer() {
   playerGroup.add(body);
   playerGroup.add(head);
 
-  // Set initial position (on the center tile)
-  playerGroup.position.set(0, 0.5, 0); // Adjust based on your board layout
+  // Initial axial coordinates
+  playerGroup.position.q = 0; // Axial q
+  playerGroup.position.r = 0; // Axial r
 
-  // Enable shadows
+  playerGroup.position.set(0, 0.5, 0); // Cartesian position
   playerGroup.castShadow = true;
   playerGroup.receiveShadow = true;
 
   return playerGroup;
 }
-
-// Function to move the player
-export function movePlayer(player, direction, hexGroup, radius) {
+// Move the player relative to the camera
+export function movePlayerRelativeToCamera(
+  player,
+  direction,
+  camera,
+  hexGroup,
+  radius
+) {
   const movementMap = {
-    up: { q: 0, r: -1 },
-    down: { q: 0, r: 1 },
-    upRight: { q: 1, r: -1 },
-    upLeft: { q: -1, r: 0 },
-    downRight: { q: 1, r: 0 },
-    downLeft: { q: -1, r: 1 },
+    forward: new THREE.Vector3(0, 0, -1),
+    backward: new THREE.Vector3(0, 0, 1),
+    left: new THREE.Vector3(-1, 0, 0),
+    right: new THREE.Vector3(1, 0, 0),
   };
 
-  const move = movementMap[direction];
-  if (!move) return;
+  const movementDirection = movementMap[direction];
+  if (!movementDirection) {
+    console.error(`Invalid direction: ${direction}`);
+    return;
+  }
 
-  const newQ = playerPosition.q + move.q;
-  const newR = playerPosition.r + move.r;
+  // Adjust direction based on camera orientation
+  const adjustedDirection = movementDirection.clone();
+  adjustedDirection.applyQuaternion(camera.quaternion);
+  adjustedDirection.y = 0; // Ignore vertical rotation
+  adjustedDirection.normalize(); // Ensure consistent length
 
-  // Check if the target tile exists
-  const { x, z } = axialToCartesian(newQ, newR, radius);
-  const validTile = hexGroup.children.some(
-    (tile) =>
-      Math.abs(tile.position.x - x) < 0.1 && Math.abs(tile.position.z - z) < 0.1
+  // Calculate the target position
+  const targetPosition = new THREE.Vector3(
+    player.position.x,
+    0,
+    player.position.z
+  ).add(adjustedDirection);
+
+  const { q: newQ, r: newR } = cartesianToAxial(
+    targetPosition.x,
+    targetPosition.z,
+    radius
   );
 
-  if (validTile) {
-    playerPosition.q = newQ;
-    playerPosition.r = newR;
+  // Validate and update position
+  if (isValidTile(newQ, newR, hexGroup, radius)) {
+    const { x, z } = axialToCartesian(newQ, newR, radius);
     player.position.set(x, 0.5, z);
+    player.userData.axial = { q: newQ, r: newR };
   } else {
-    console.log("Invalid move");
+    console.log("Invalid move: No valid tile at target position");
   }
 }

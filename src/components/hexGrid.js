@@ -129,10 +129,14 @@ export function cartesianToAxial(x, z, radius) {
   };
 }
 
-function isValidTile(q, r) {
+export function isValidTile(q, r, hexGroup, radius) {
+  // Convert axial coordinates to Cartesian
   const { x, z } = axialToCartesian(q, r, radius);
-  return hexGroup.children.some(
-    (tile) =>
-      Math.abs(tile.position.x - x) < 0.1 && Math.abs(tile.position.z - z) < 0.1
-  );
+
+  // Check if a tile exists at the given position
+  return hexGroup.children.some((tile) => {
+    const dx = Math.abs(tile.position.x - x);
+    const dz = Math.abs(tile.position.z - z);
+    return dx < radius * 0.1 && dz < radius * 0.1; // Tolerance for precision
+  });
 }
