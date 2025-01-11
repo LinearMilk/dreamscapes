@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { WEBGL } from "./utils/webgl.js";
 import { setupCamera } from "./scripts/camera.js";
 import { setupLighting } from "./scripts/lighting.js";
+import { createPlayer } from "./components/player.js";
 import {
   radius,
   createHexGrid,
@@ -25,6 +26,9 @@ initializeSeed(seed);
 // Log the seed for debugging or reproducibility
 console.log(`Using seed: ${seed}`);
 const scene = new THREE.Scene();
+let player;
+player = createPlayer();
+scene.add(player);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x87ceeb);
