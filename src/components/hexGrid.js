@@ -128,3 +128,11 @@ export function cartesianToAxial(x, z, radius) {
     r: Math.round(r),
   };
 }
+
+function isValidTile(q, r) {
+  const { x, z } = axialToCartesian(q, r, radius);
+  return hexGroup.children.some(
+    (tile) =>
+      Math.abs(tile.position.x - x) < 0.1 && Math.abs(tile.position.z - z) < 0.1
+  );
+}
