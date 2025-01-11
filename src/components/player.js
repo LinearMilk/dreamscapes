@@ -34,6 +34,8 @@ export function createPlayer() {
   return playerGroup;
 }
 // Move the player relative to the camera
+let isAnimating = false; // Prevent multiple movements at once
+
 export function movePlayerRelativeToCamera(
   player,
   direction,
@@ -41,6 +43,8 @@ export function movePlayerRelativeToCamera(
   hexGroup,
   radius
 ) {
+  if (isAnimating) return; // Prevent new movements during animation
+
   const movementMap = {
     forward: new THREE.Vector3(0, 0, -1),
     backward: new THREE.Vector3(0, 0, 1),
@@ -80,16 +84,50 @@ export function movePlayerRelativeToCamera(
 
     if (targetTile?.userData?.biome === "water") {
       console.log("Movement blocked: Cannot enter water tiles!");
-    } else {
-      // Move the player to the new position
-      const { x, z } = axialToCartesian(newQ, newR, radius);
-      player.position.set(x, 0.5, z);
-      player.userData.axial = { q: newQ, r: newR };
+      return;
     }
 
-    // Check and expand the map
-    checkProximityAndExpand(player, hexGroup, radius);
+    // Call checkProximityAndExpand before starting the animation
+    checkProximityAndExpand(
+      { userData: { axial: { q: newQ, r: newR } } }, // Pass the target axial coordinates
+      hexGroup,
+      radius
+    );
+
+    const { x, z } = axialToCartesian(newQ, newR, radius);
+    animatePlayer(player, { x, y: 0.5, z }, () => {
+      player.userData.axial = { q: newQ, r: newR };
+    });
   } else {
     console.log("Invalid move: No valid tile at target position");
   }
+}
+
+function animatePlayer(player, targetPosition, onComplete) {
+  const duration = 0.5; // Animation duration in seconds
+  const clock = new THREE.Clock(); // Track animation time
+  isAnimating = true;
+
+  const startPosition = player.position.clone();
+
+  function animate() {
+    const elapsedTime = clock.getElapsedTime();
+    const t = Math.min(elapsedTime / duration, 1); // Normalize time (0 to 1)
+
+    // Interpolate position
+    player.position.lerpVectors(startPosition, targetPosition, t);
+
+    // If animation is complete
+    if (t >= 1) {
+      isAnimating = false; // Allow new inputs
+      onComplete(); // Callback for completing movement
+      return;
+    }
+
+    // Continue animation
+    requestAnimationFrame(animate);
+  }
+
+  clock.start();
+  animate();
 }
