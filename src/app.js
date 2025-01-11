@@ -9,12 +9,21 @@ import {
   getBiomeFromNoise,
   axialToCartesian,
   cartesianToAxial,
+  initializeSeed,
 } from "./components/hexGrid.js";
 
 if (!WEBGL.isWebGLAvailable()) {
   const warning = WEBGL.getWebGLErrorMessage();
   document.body.appendChild(warning);
 }
+// Define the seed (can be hardcoded, user-defined, or generated randomly)
+const seed = "my-custom-seed"; // Replace with a user-provided string or random generation
+
+// Initialize the seed for procedural generation
+initializeSeed(seed);
+
+// Log the seed for debugging or reproducibility
+console.log(`Using seed: ${seed}`);
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -75,18 +84,27 @@ function onClick() {
       radius
     );
 
-    // Get neighbors and place new tiles
-    const neighbors = getNeighborPositions(q, r);
+    // Get neighbors and generate new hexes
+    const neighbors = getNeighborPositions(q, r); // Get axial neighbors
+
     neighbors.forEach(({ q: neighborQ, r: neighborR }) => {
       if (!doesHexExist(neighborQ, neighborR)) {
-        const biome = getBiomeFromNoise(neighborQ, neighborR); // Adjust biome logic as needed
-        const newHex = createHexTile(0, 0, 0.3, biome); // Create the hex (position set later)
-        addHexToGroup(neighborQ, neighborR, newHex); // Add and snap to correct position
+        // Convert axial coordinates to Cartesian
+        const { x, z } = axialToCartesian(neighborQ, neighborR, radius);
+
+        // Determine the biome for the new hex
+        const biome = getBiomeFromNoise(neighborQ, neighborR);
+
+        // Create the new hex with axial coordinates
+        const newHex = createHexTile(x, z, 0.3, biome, neighborQ, neighborR);
+
+        // Add the new hex to the scene and track it
+        hexGroup.add(newHex);
+        addHexToGroup(neighborQ, neighborR, newHex); // Track in axial space
       }
     });
   }
 }
-
 window.addEventListener("mousemove", onMouseMove);
 window.addEventListener("click", onClick);
 

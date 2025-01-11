@@ -1,8 +1,29 @@
 import * as THREE from "three";
-import { SimplexNoise } from "three/examples/jsm/math/SimplexNoise.js"; // Import Simplex Noise for clustering
+import { createNoise2D } from "simplex-noise"; // Import the noise creation function
+import seedrandom from "seedrandom";
+
+// Global variables
+let seededRandom;
+let biomeNoise; // Noise generator
 
 export const radius = 1; // Radius of each hex tile
 const gap = 0.05; // Gap between tiles
+
+function pseudoRandomHash(q, r, seed = 0) {
+  const prime1 = 73856094;
+  const prime2 = 19349663;
+  return Math.abs((q * prime1 + r * prime2 + seed) % 9973); // Use modulo a prime
+}
+
+// Initialize the seed and noise generator
+export function initializeSeed(seed) {
+  // Create the seeded random number generator
+  seededRandom = seedrandom(seed);
+
+  // Create a 2D noise function using the seeded random
+  biomeNoise = createNoise2D(seededRandom);
+  console.log(`Seed initialized: ${seed}`);
+}
 
 // Biome definitions
 const biomes = {
@@ -11,22 +32,36 @@ const biomes = {
   desert: [0xffcc66, 0xffd27f, 0xe6b566],
 };
 
-const biomeNoise = new SimplexNoise(); // Noise generator
+// Get a random biome color
+function getDeterministicBiomeColor(biome, q, r) {
+  if (!biomes[biome]) {
+    console.error(`Invalid biome: ${biome}`);
+    return 0xffffff; // Fallback to white
+  }
 
-// Assign biomes based on noise
-export function getBiomeFromNoise(x, z) {
-  const noiseValue = biomeNoise.noise(x * 0.1, z * 0.1); // Scale noise frequency
+  const colors = biomes[biome];
+  const hash = pseudoRandomHash(q, r) % colors.length; // Hash modulo the number of colors
+
+  // Add debugging to confirm no bands
+  console.log(
+    `Biome: ${biome}, q: ${q}, r: ${r}, hash: ${hash}, color: ${colors[hash]}`
+  );
+
+  return colors[hash];
+}
+
+// Get biome type based on noise
+export function getBiomeFromNoise(q, r) {
+  if (!biomeNoise)
+    throw new Error("Seed not initialized. Call initializeSeed first.");
+  const noiseValue = biomeNoise(q * 0.1, r * 0.1); // Use axial coordinates for noise
   if (noiseValue < -0.3) return "water";
   if (noiseValue < 0.3) return "grassland";
   return "desert";
 }
 
-function getRandomBiomeColor(biome) {
-  const colors = biomes[biome];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-export function createHexTile(x, z, height, biome) {
+// Create a hex tile
+export function createHexTile(x, z, height, biome, q, r) {
   const shape = new THREE.Shape();
   const radiusWithGap = radius - gap;
   for (let i = 0; i < 6; i++) {
@@ -45,8 +80,9 @@ export function createHexTile(x, z, height, biome) {
   hexGeometry.rotateX(-Math.PI / 2);
 
   const hexMaterial = new THREE.MeshStandardMaterial({
-    color: getRandomBiomeColor(biome),
+    color: getDeterministicBiomeColor(biome, q, r), // Use deterministic color
   });
+
   const hex = new THREE.Mesh(hexGeometry, hexMaterial);
   hex.position.set(x, -height / 2, z);
   hex.castShadow = true;
@@ -55,6 +91,7 @@ export function createHexTile(x, z, height, biome) {
   return hex;
 }
 
+// Create a hex grid
 export function createHexGrid(gridRadius, height = 0.3) {
   const hexGroup = new THREE.Group();
 
@@ -66,7 +103,7 @@ export function createHexGrid(gridRadius, height = 0.3) {
         // Convert axial to Cartesian for precise positioning
         const { x, z } = axialToCartesian(q, r, radius);
         const biome = getBiomeFromNoise(q, r); // Generate biome for this tile
-        const hex = createHexTile(x, z, height, biome); // Create the tile
+        const hex = createHexTile(x, z, height, biome, q, r); // Create the tile
         hexGroup.add(hex); // Add to the group
       }
     }
