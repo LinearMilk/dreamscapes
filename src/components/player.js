@@ -104,21 +104,38 @@ export function movePlayerRelativeToCamera(
 }
 
 function animatePlayer(player, targetPosition, onComplete) {
-  const duration = 0.5; // Animation duration in seconds
+  const duration = 0.6; // Animation duration in seconds
   const clock = new THREE.Clock(); // Track animation time
   isAnimating = true;
 
   const startPosition = player.position.clone();
 
+  // Easing function (cubic easing in-out)
+  const easeInOutCubic = (t) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
   function animate() {
     const elapsedTime = clock.getElapsedTime();
     const t = Math.min(elapsedTime / duration, 1); // Normalize time (0 to 1)
+    const easedT = easeInOutCubic(t); // Apply easing
 
     // Interpolate position
-    player.position.lerpVectors(startPosition, targetPosition, t);
+    player.position.lerpVectors(startPosition, targetPosition, easedT);
+
+    // Bobbing effect (sinusoidal bounce)
+    const bobbing = Math.sin(easedT * Math.PI) * 0.5; // Bounce amplitude: 0.1
+    player.position.y = targetPosition.y + bobbing;
+
+    // Rotational tilt (lean into movement)
+    const movementDirection = new THREE.Vector3()
+      .subVectors(targetPosition, startPosition)
+      .normalize();
+    player.rotation.z = movementDirection.x * bobbing; // Tilt based on movement
 
     // If animation is complete
     if (t >= 1) {
+      player.rotation.z = 0; // Reset tilt
+      player.position.y = targetPosition.y; // Reset bounce
       isAnimating = false; // Allow new inputs
       onComplete(); // Callback for completing movement
       return;
