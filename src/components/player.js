@@ -1,10 +1,22 @@
 import * as THREE from "three";
+import { Howl } from "howler";
 import {
   axialToCartesian,
   cartesianToAxial,
   isValidTile,
   checkProximityAndExpand,
 } from "./hexGrid";
+
+// Sound effects
+const moveSound = new Howl({
+  src: ["./assets/sounds/move.mp3"], // Path to movement sound
+  volume: 0.75, // Adjust volume as needed
+});
+
+const rejectionSound = new Howl({
+  src: ["./assets/sounds/rejection.mp3"], // Path to rejection sound
+  volume: 0.1, // Adjust volume as needed
+});
 
 export function createPlayer() {
   // Body
@@ -83,6 +95,7 @@ export function movePlayerRelativeToCamera(
     );
 
     if (targetTile?.userData?.biome === "water") {
+      rejectionSound.play(); // Play rejection sound
       console.log("Movement blocked: Cannot enter water tiles!");
       return;
     }
@@ -95,6 +108,8 @@ export function movePlayerRelativeToCamera(
     );
 
     const { x, z } = axialToCartesian(newQ, newR, radius);
+    // Play movement sound
+    moveSound.play();
     animatePlayer(player, { x, y: 0.5, z }, () => {
       player.userData.axial = { q: newQ, r: newR };
     });
