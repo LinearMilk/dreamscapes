@@ -9,12 +9,12 @@ import {
 
 // Sound effects
 const moveSound = new Howl({
-  src: ["./assets/sounds/move.mp3"], // Path to movement sound
+  src: ["/assets/sounds/move.mp3"], // Path to movement sound
   volume: 0.75, // Adjust volume as needed
 });
 
 const rejectionSound = new Howl({
-  src: ["./assets/sounds/rejection.mp3"], // Path to rejection sound
+  src: ["/assets/sounds/rejection.mp3"], // Path to rejection sound
   volume: 0.1, // Adjust volume as needed
 });
 
