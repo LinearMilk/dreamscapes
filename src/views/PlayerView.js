@@ -7,6 +7,17 @@ export class PlayerView {
     this.radius = radius;
     this.playerMesh = this.createPlayerMesh();
     this.scene.add(this.playerMesh);
+    // Load sounds
+    this.moveSound = new Audio("/assets/sounds/move.mp3");
+    this.rejectionSound = new Audio("/assets/sounds/rejection.mp3");
+  }
+
+  playMoveSound() {
+    this.moveSound.play();
+  }
+
+  playRejectionSound() {
+    this.rejectionSound.play();
   }
 
   createPlayerMesh() {

@@ -101,6 +101,7 @@ export class GameController {
     const { q: newQ, r: newR } = this.calculateTargetAxial(adjustedDirection);
 
     if (this.playerModel.canMoveTo(newQ, newR)) {
+      this.playerView.playMoveSound(); // Play movement sound
       this.playerModel.setAnimating(true);
       this.playerView.animateToPosition(newQ, newR, () => {
         this.playerModel.setPosition(newQ, newR);
@@ -114,6 +115,7 @@ export class GameController {
       });
     } else {
       console.log("Movement blocked: Cannot enter water tiles!");
+      this.playerView.playRejectionSound();
     }
   }
 }
