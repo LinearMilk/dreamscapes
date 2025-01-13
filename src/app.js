@@ -1,103 +1,35 @@
+// app.js
 import * as THREE from "three";
 import { WEBGL } from "./utils/webgl.js";
-import { setupCamera } from "./scripts/camera.js";
-import { setupLighting } from "./scripts/lighting.js";
-import {
-  createPlayer,
-  movePlayerRelativeToCamera,
-} from "./components/player.js";
-import {
-  radius,
-  createHexGrid,
-  createHexTile,
-  getBiomeFromNoise,
-  axialToCartesian,
-  cartesianToAxial,
-  initializeSeed,
-} from "./components/hexGrid.js";
+import { setupCamera } from "./views/CameraView.js";
+import { setupLighting } from "./views/LightingView.js";
+import { GameController } from "./controllers/GameController.js";
 
 if (!WEBGL.isWebGLAvailable()) {
   const warning = WEBGL.getWebGLErrorMessage();
   document.body.appendChild(warning);
 }
-// Define the seed (can be hardcoded, user-defined, or generated randomly)
-const seed = "my-custom-seed"; // Replace with a user-provided string or random generation
 
-// Initialize the seed for procedural generation
-initializeSeed(seed);
-
-// Log the seed for debugging or reproducibility
-console.log(`Using seed: ${seed}`);
+// Create the main scene and renderer
 const scene = new THREE.Scene();
-let player;
-player = createPlayer();
-scene.add(player);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x87ceeb);
 document.body.appendChild(renderer.domElement);
 
+// Setup camera and controls
 const { camera, controls } = setupCamera(renderer, scene);
+
+// Setup lighting
 setupLighting(scene);
 
-const hexGroup = createHexGrid(5, 0.3); // Initial grid
-scene.add(hexGroup);
+// Initialize GameController
+const gameController = new GameController(scene, camera);
 
-const existingHexes = new Set(); // Track axial coordinates of hexes
-
-// Populate `existingHexes` with initial grid
-hexGroup.children.forEach((hex) => {
-  const { q, r } = cartesianToAxial(hex.position.x, hex.position.z, radius);
-  existingHexes.add(`${q},${r}`);
-});
-
-function addHexToGroup(q, r, hex) {
-  const key = `${q},${r}`;
-  if (!existingHexes.has(key)) {
-    const { x, z } = axialToCartesian(q, r, radius); // Snap to exact Cartesian position
-    hex.position.set(x, -0.15, z); // Adjust Y position as necessary
-    existingHexes.add(key); // Track the axial coordinate
-    hexGroup.add(hex);
-  }
-}
-
-function doesHexExist(q, r) {
-  return existingHexes.has(`${q},${r}`);
-}
-
-function getNeighborPositions(q, r) {
-  const neighbors = [
-    { q: q + 1, r: r }, // Right
-    { q: q - 1, r: r }, // Left
-    { q: q, r: r + 1 }, // Top-right
-    { q: q - 1, r: r + 1 }, // Top-left
-    { q: q, r: r - 1 }, // Bottom-right
-    { q: q + 1, r: r - 1 }, // Bottom-left
-  ];
-  return neighbors;
-}
-
-window.addEventListener("keydown", (event) => {
-  const directionMap = {
-    w: "forward",
-    s: "backward",
-    a: "left",
-    d: "right",
-    ArrowUp: "forward",
-    ArrowDown: "backward",
-    ArrowLeft: "left",
-    ArrowRight: "right",
-  };
-
-  const direction = directionMap[event.key];
-  if (direction) {
-    movePlayerRelativeToCamera(player, direction, camera, hexGroup, 1);
-  }
-});
-
+// Animation loop
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
+  controls.update(); // Update camera controls
   renderer.render(scene, camera);
 }
 animate();
