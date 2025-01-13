@@ -35,14 +35,12 @@ export class GameController {
   bindInputEvents() {
     window.addEventListener("keydown", (event) => {
       const directionMap = {
-        w: "forward",
-        s: "backward",
-        a: "left",
-        d: "right",
-        ArrowUp: "forward",
-        ArrowDown: "backward",
-        ArrowLeft: "left",
-        ArrowRight: "right",
+        q: { dq: -1, dr: 0 }, // Up-left
+        w: { dq: 0, dr: -1 }, // Up-right
+        e: { dq: 1, dr: -1 }, // Right
+        d: { dq: 1, dr: 0 }, // Down-right
+        s: { dq: 0, dr: 1 }, // Down-left
+        a: { dq: -1, dr: 1 }, // Left
       };
 
       const direction = directionMap[event.key];
@@ -53,25 +51,32 @@ export class GameController {
   }
 
   calculateMovement(direction) {
-    const movementMap = {
-      forward: new THREE.Vector3(0, 0, -1),
-      backward: new THREE.Vector3(0, 0, 1),
-      left: new THREE.Vector3(-1, 0, 0),
-      right: new THREE.Vector3(1, 0, 0),
-    };
+    const movementVector = new THREE.Vector3(direction.dq, 0, direction.dr);
 
-    const movementDirection = movementMap[direction];
-    if (!movementDirection) {
-      console.error(`Invalid direction: ${direction}`);
-      return null;
-    }
+    // Rotate the vector based on the camera's orientation
+    movementVector.applyQuaternion(this.camera.quaternion);
+    movementVector.y = 0; // Ignore vertical rotation
+    movementVector.normalize();
 
-    const adjustedDirection = movementDirection.clone();
-    adjustedDirection.applyQuaternion(this.camera.quaternion);
-    adjustedDirection.y = 0; // Ignore vertical rotation
-    adjustedDirection.normalize(); // Ensure consistent length
+    // Snap the adjusted movement vector back to the nearest hex direction
+    const hexDirections = [
+      { dq: -1, dr: 0 }, // Up-left
+      { dq: 0, dr: -1 }, // Up-right
+      { dq: 1, dr: -1 }, // Right
+      { dq: 1, dr: 0 }, // Down-right
+      { dq: 0, dr: 1 }, // Down-left
+      { dq: -1, dr: 1 }, // Left
+    ];
 
-    return adjustedDirection;
+    const snappedDirection = hexDirections.reduce((closest, current) => {
+      const currentVector = new THREE.Vector3(current.dq, 0, current.dr);
+      const currentDistance = movementVector.distanceTo(currentVector);
+      const closestVector = new THREE.Vector3(closest.dq, 0, closest.dr);
+      const closestDistance = movementVector.distanceTo(closestVector);
+      return currentDistance < closestDistance ? current : closest;
+    });
+
+    return snappedDirection;
   }
 
   calculateTargetAxial(adjustedDirection) {
@@ -79,7 +84,7 @@ export class GameController {
       this.playerView.playerMesh.position.x,
       0,
       this.playerView.playerMesh.position.z
-    ).add(adjustedDirection);
+    ).add(new THREE.Vector3(adjustedDirection.dq, 0, adjustedDirection.dr));
 
     return cartesianToAxial(targetPosition.x, targetPosition.z, this.radius);
   }
