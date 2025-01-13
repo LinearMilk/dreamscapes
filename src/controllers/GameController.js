@@ -48,21 +48,11 @@ export class GameController {
       const direction = directionMap[event.key];
       if (direction) {
         this.handlePlayerMove(direction);
-        console.log(this.camera);
       }
     });
   }
 
-  handlePlayerMove(direction) {
-    if (this.playerModel.isCurrentlyAnimating()) return; // Block multiple animations
-
-    // const movementMap = {
-    //   forward: { dq: 0, dr: -1 },
-    //   backward: { dq: 0, dr: 1 },
-    //   left: { dq: -1, dr: 0 },
-    //   right: { dq: 1, dr: 0 },
-    // };
-
+  calculateMovement(direction) {
     const movementMap = {
       forward: new THREE.Vector3(0, 0, -1),
       backward: new THREE.Vector3(0, 0, 1),
@@ -70,35 +60,40 @@ export class GameController {
       right: new THREE.Vector3(1, 0, 0),
     };
 
-    // const { dq, dr } = movementMap[direction];
-    // const { q, r } = this.playerModel.getPosition();
-    // const newQ = q + dq;
-    // const newR = r + dr;
-
     const movementDirection = movementMap[direction];
     if (!movementDirection) {
       console.error(`Invalid direction: ${direction}`);
-      return;
+      return null;
     }
 
-    // Adjust direction based on camera orientation
     const adjustedDirection = movementDirection.clone();
     adjustedDirection.applyQuaternion(this.camera.quaternion);
     adjustedDirection.y = 0; // Ignore vertical rotation
     adjustedDirection.normalize(); // Ensure consistent length
-    console.log(this.playerView);
 
+    return adjustedDirection;
+  }
+
+  calculateTargetAxial(adjustedDirection) {
     const targetPosition = new THREE.Vector3(
       this.playerView.playerMesh.position.x,
       0,
       this.playerView.playerMesh.position.z
     ).add(adjustedDirection);
 
-    const { q: newQ, r: newR } = cartesianToAxial(
-      targetPosition.x,
-      targetPosition.z,
-      this.radius
-    );
+    return cartesianToAxial(targetPosition.x, targetPosition.z, this.radius);
+  }
+
+  handlePlayerMove(direction) {
+    if (this.playerModel.isCurrentlyAnimating()) {
+      console.log("Animation in progress. Ignoring input.");
+      return;
+    }
+
+    const adjustedDirection = this.calculateMovement(direction);
+    if (!adjustedDirection) return;
+
+    const { q: newQ, r: newR } = this.calculateTargetAxial(adjustedDirection);
 
     if (this.playerModel.canMoveTo(newQ, newR)) {
       this.playerModel.setAnimating(true);
